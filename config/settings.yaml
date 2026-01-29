@@ -1,0 +1,19 @@
+# Trading Configuration
+
+trading:
+  pairs:
+    - "EURUSD"
+    - "GBPUSD"
+    - "USDJPY"
+  timeframe: "M1"
+  magic_number: 123456
+
+risk:
+  max_daily_loss_percent: 4.0
+  risk_per_trade_percent: 0.5
+  max_open_trades: 1
+
+system:
+  log_level: "INFO"
+  loop_interval_seconds: 1
+  dry_run: false
