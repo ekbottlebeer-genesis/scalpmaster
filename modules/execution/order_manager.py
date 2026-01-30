@@ -17,7 +17,6 @@ class OrderManager:
         Returns a list of open positions matching the Magic Number.
         If symbol is provided, filters by symbol.
         """
-        """
         # Resolve suffix if symbol is provided
         # The MT5.positions_get call can filter by symbol but it must match exactly
         if symbol:
