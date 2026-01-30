@@ -150,8 +150,14 @@ class ScalpMasterBot:
         tick = MarketData.get_tick_info(symbol)
         spread = 0.0
         current_price = 0.0
+        
+        # Get point size dynamically
+        mt_symbol = Config.get_mt5_symbol(symbol)
+        sym_info = MT5.symbol_info(mt_symbol)
+        point = sym_info.point if sym_info else 0.00001
+
         if tick:
-            spread_points = (tick.ask - tick.bid) / 0.00001 # approx points
+            spread_points = (tick.ask - tick.bid) / point
             spread = spread_points
             current_price = tick.ask if bias == "LONG" else tick.bid # Rough guess
 
@@ -215,7 +221,10 @@ class ScalpMasterBot:
         # Here we assume Market Order + generic 10 pip SL for demo
         sl_pips = 10
         tp_pips = 20
-        point = 0.00001
+        
+        mt_symbol = Config.get_mt5_symbol(symbol)
+        sym_info = MT5.symbol_info(mt_symbol)
+        point = sym_info.point if sym_info else 0.00001
         
         current_price = ctx.current_price
         if direction == "LONG":
