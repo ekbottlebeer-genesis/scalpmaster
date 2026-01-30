@@ -1,4 +1,4 @@
-import logging
+ import logging
 import requests
 import json
 import time
@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 class NewsLoader:
     # Forex Factory JSON feed (unofficial but stable)
     NEWS_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-    CACHE_DURATION = 6 * 3600  # 6 Hours
+    CACHE_DURATION = 4 * 3600  # 4 Hours
+    RETRY_DELAY = 300 # 5 minutes on failure
     
     def __init__(self):
         self.news_cache: List[Dict] = []
@@ -22,7 +23,9 @@ class NewsLoader:
         Fetches news from the source if cache is expired.
         """
         now = time.time()
-        if now - self.last_fetch_time < self.CACHE_DURATION and self.news_cache:
+        
+        # Check Cache Expiry (regardless of empty cache)
+        if now - self.last_fetch_time < self.CACHE_DURATION:
             return
 
         try:
@@ -42,7 +45,9 @@ class NewsLoader:
             
         except Exception as e:
             logger.error(f"Failed to fetch news: {e}")
-            # Keep old cache if available, essentially a soft fail logic
+            # Prevent spamming on error: set last_fetch_time to now - cache + retry_delay
+            # So it waits RETRY_DELAY seconds before trying again
+            self.last_fetch_time = now - self.CACHE_DURATION + self.RETRY_DELAY
 
     def is_news_imminent(self, symbol: str) -> bool:
         """

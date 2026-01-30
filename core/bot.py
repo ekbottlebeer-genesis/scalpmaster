@@ -99,6 +99,10 @@ class ScalpMasterBot:
                 logger.error(f"Error processing {symbol}: {e}")
 
     def _process_symbol(self, symbol: str, now: datetime):
+        # 0. Skip if position exists (One trade per pair rule)
+        if self.execution.count_open_trades(symbol) > 0:
+            return
+
         # 0. Check connection/availability specific to symbol?
         # Done inside MarketData methods mostly.
 
