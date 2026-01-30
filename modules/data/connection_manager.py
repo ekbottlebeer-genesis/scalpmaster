@@ -19,7 +19,14 @@ class ConnectionManager:
         
         # 1. Initialize Terminal
         if not MT5.initialize(path=Config.MT5_PATH):
-            logger.error(f"MT5 Initialize failed, error code = {MT5.last_error()}")
+            err_code = MT5.last_error()
+            logger.error(f"MT5 Initialize failed, error code = {err_code}")
+            
+            if "10003" in str(err_code) or err_code == -10003:
+                logger.critical("Error -10003: INVALID MT5 PATH.")
+                logger.critical(f"Please check 'MT5_PATH' in your .env file. Current value: '{Config.MT5_PATH}'")
+                logger.critical("Ensure it points to the 'terminal64.exe' file, NOT just the folder.")
+            
             return False
 
         # 2. Login

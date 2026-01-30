@@ -39,7 +39,7 @@ if %errorlevel% neq 0 (
 echo [PIP] Dependencies ready.
 
 :run
-cls
+echo.
 echo ====================================================
 echo             ScalpMaster Runtime
 echo ====================================================
