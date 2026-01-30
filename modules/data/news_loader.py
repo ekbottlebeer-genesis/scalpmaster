@@ -110,3 +110,32 @@ class NewsLoader:
                 continue
                 
         return False
+    def get_upcoming_events(self, limit: int = 5) -> List[Dict]:
+        """
+        Returns the next upcoming high-impact events.
+        """
+        self._fetch_news()
+        
+        now_utc = datetime.utcnow()
+        if hasattr(datetime, "fromisoformat"):
+             # Simple filter for future events
+             pass
+             
+        future_events = []
+        for event in self.news_cache:
+            try:
+                date_str = event.get('date')
+                event_time = datetime.fromisoformat(date_str)
+                if event_time.tzinfo is not None:
+                     event_time = event_time.astimezone(timezone.utc).replace(tzinfo=None)
+                
+                if event_time > now_utc:
+                    future_events.append(event)
+            except:
+                continue
+                
+        # Sort by time just in case
+        # (Feed is usually sorted but not guaranteed)
+        future_events.sort(key=lambda x: x['date'])
+        
+        return future_events[:limit]

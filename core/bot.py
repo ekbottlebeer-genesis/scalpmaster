@@ -42,6 +42,7 @@ class ScalpMasterBot:
             
         # State Tracking
         self.last_scan_time = 0
+        self.start_time = time.time()
 
     def start(self):
         """
@@ -268,3 +269,35 @@ class ScalpMasterBot:
     def _get_balance(self):
         info = MT5.account_info()
         return info.balance if info else 10000.0
+
+    def get_state_summary(self) -> Dict:
+        """
+        Returns a dictionary summary of the bot's current state for UI/Telegram.
+        """
+        equity = self._get_equity()
+        balance = self._get_balance()
+        daily_pnl = equity - self.risk_manager.initial_balance # Approximate
+        
+        uptime_seconds = int(time.time() - self.start_time) if self.is_running else 0
+        hours = uptime_seconds // 3600
+        minutes = (uptime_seconds % 3600) // 60
+        
+        return {
+            "mode": "DRY-RUN" if Config.DRY_RUN else "LIVE",
+            "is_running": self.is_running,
+            "uptime": f"{hours}h {minutes}m",
+            "balance": balance,
+            "equity": equity,
+            "daily_pnl": daily_pnl,
+            "open_trades": self.execution.count_open_trades(), 
+            "pairs": len(Config.TRADING_PAIRS)
+        }
+
+    def panic_close(self):
+        """
+        Emergency method to close all positions.
+        """
+        logger.warning("PANIC CLOSE TRIGGERED!")
+        TelegramNotifier.send("🚨 <b>PANIC CLOSE TRIGGERED!</b> Closing all positions...")
+        self.execution.close_all_trades()
+

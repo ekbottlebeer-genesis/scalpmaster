@@ -8,10 +8,11 @@ from modules.ui.telegram.handlers import register_handlers
 logger = logging.getLogger(__name__)
 
 class TelegramBot:
-    def __init__(self):
+    def __init__(self, engine=None):
         self.token = Config.TELEGRAM_TOKEN
         self.allowed_chat_id = str(Config.TELEGRAM_CHAT_ID)
         self.app = None
+        self.engine = engine
 
     async def whitelist_middleware(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -31,6 +32,26 @@ class TelegramBot:
         # We usually use a Filter.
         pass
 
+    async def post_init(self, application):
+        """
+        Post-initialization hook to set bot data and commands.
+        """
+        # Store engine in bot_data for commands to access
+        application.bot_data["engine"] = self.engine
+        
+        # Set Menu Commands
+        commands_list = [
+            ("status", "System Overview & PnL"),
+            ("scan", "Force Market Scan"),
+            ("panic", "🚨 CLOSE ALL TRADES"),
+            ("mode", "Show Current Mode"),
+            ("news", "Check News Status"),
+            ("risk", "View/Set Risk Settings"),
+            ("help", "Show All Commands")
+        ]
+        await application.bot.set_my_commands(commands_list)
+        logger.info("Telegram Menu Commands Registered.")
+
     def run(self):
         """
         Starts the polling loop.
@@ -40,7 +61,7 @@ class TelegramBot:
             logger.error("Telegram Token not set. Bot disabled.")
             return
 
-        self.app = ApplicationBuilder().token(self.token).build()
+        self.app = ApplicationBuilder().token(self.token).post_init(self.post_init).build()
 
         # Add Security Filter to all handlers
         # We'll create a generic filter

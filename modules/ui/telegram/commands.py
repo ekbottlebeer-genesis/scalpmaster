@@ -25,16 +25,24 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode=ParseMode.HTML)
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: Connect to global Bot State
+    engine = context.bot_data.get("engine")
+    if not engine:
+        await update.message.reply_text("⚠️ Engine not connected.")
+        return
+
+    state = engine.get_state_summary()
+    
     msg = (
         f"{bold('SYSTEM STATUS')}\n"
-        f"Mode: {code('DRY-RUN')}\n"
-        f"Uptime: 00:00:00\n"
-        f"Regime: {code('UNDEFINED')}\n\n"
+        f"Mode: {code(state['mode'])}\n"
+        f"Uptime: {state['uptime']}\n"
+        f"State: {'🟢 RUNNING' if state['is_running'] else '🔴 STOPPED'}\n\n"
         f"{bold('ACCOUNT')}\n"
-        f"Balance: $0.00\n"
-        f"Daily PnL: $0.00\n"
-        f"Open Trades: 0"
+        f"Balance: ${state['balance']:.2f}\n"
+        f"Equity: ${state['equity']:.2f}\n"
+        f"Daily PnL: ${state['daily_pnl']:.2f}\n"
+        f"Open Trades: {state['open_trades']}\n"
+        f"Pairs: {state['pairs']}"
     )
     await update.message.reply_text(msg, parse_mode=ParseMode.HTML)
 
@@ -42,9 +50,12 @@ async def cmd_health(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("System Healthy. Tick Loop Active.")
 
 async def cmd_panic(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # IMPORTANT: Logic to trigger close_all()
-    await update.message.reply_text(f"🚨 {bold('PANIC TRIGGERED')} 🚨\nAttempting to close ALL positions...")
-    # TODO: Call OrderManager.close_all()
+    engine = context.bot_data.get("engine")
+    if engine:
+        engine.panic_close()
+        await update.message.reply_text(f"🚨 {bold('PANIC EXECUTED')} 🚨\nClose all signal sent.")
+    else:
+        await update.message.reply_text("Error: Engine not connected.")
 
 async def cmd_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔍 Scanning markets...")
@@ -56,7 +67,34 @@ async def cmd_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Current Mode: DRY-RUN")
 
 async def cmd_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("No upcoming high-impact news detected.")
+    engine = context.bot_data.get("engine")
+    if not engine:
+        await update.message.reply_text("Engine not connected.")
+        return
+
+    events = engine.news_loader.get_upcoming_events(limit=5)
+    
+    if not events:
+        await update.message.reply_text("📅 No upcoming High-Impact news found.")
+        return
+        
+    msg = f"{bold('UPCOMING HIGH IMPACT NEWS')}\n\n"
+    for e in events:
+        # Parse easier
+        title = e.get('title', 'N/A')
+        country = e.get('country', '??')
+        date_str = e.get('date', '')
+        
+        # Try to format time nicely (Very rough parsing again)
+        try:
+             # Just show the raw string or slice it if standard ISO
+             # 2024-01-30T15:00:00+00:00 -> 15:00 (UTC)
+             ts = date_str.split('T')[1][:5]
+             msg += f"• {country} - {title} @ {ts}\n"
+        except:
+             msg += f"• {country} - {title}\n"
+             
+    await update.message.reply_text(msg, parse_mode=ParseMode.HTML)
 
 # --- Config & Debug Stubs ---
 async def cmd_risk(update: Update, context: ContextTypes.DEFAULT_TYPE): await update.message.reply_text("Risk set.")

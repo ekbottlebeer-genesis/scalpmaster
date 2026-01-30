@@ -32,7 +32,7 @@ def main():
 
     # 2. Initialize Components
     bot = ScalpMasterBot()
-    telegram = TelegramBot()
+    telegram = TelegramBot(engine=bot)
 
     # 3. Start Telegram (Daemon Thread)
     # Critical Audit Fix: Prevent blocking main loop
