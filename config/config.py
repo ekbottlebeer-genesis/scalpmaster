@@ -27,8 +27,17 @@ class Config:
     MT5_PASSWORD = os.getenv("MT5_PASSWORD", "")
     MT5_SERVER = os.getenv("MT5_SERVER", "")
     MT5_PATH = os.getenv("MT5_PATH", "")
+    MT5_SUFFIX = os.getenv("MT5_SUFFIX", "")
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+    @classmethod
+    def get_mt5_symbol(cls, pair: str) -> str:
+        """
+        Appends the configured suffix to the pair name.
+        Example: "EURUSD" -> "EURUSD.a" if suffix is ".a"
+        """
+        return f"{pair}{cls.MT5_SUFFIX}"
 
     # Trading Settings (from settings.yaml)
     TRADING_PAIRS = _settings.get("trading", {}).get("pairs", [])

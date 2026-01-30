@@ -17,8 +17,12 @@ class OrderManager:
         Returns a list of open positions matching the Magic Number.
         If symbol is provided, filters by symbol.
         """
+        """
+        # Resolve suffix if symbol is provided
+        # The MT5.positions_get call can filter by symbol but it must match exactly
         if symbol:
-            positions = MT5.positions_get(symbol=symbol)
+            mt_symbol = Config.get_mt5_symbol(symbol)
+            positions = MT5.positions_get(symbol=mt_symbol)
         else:
             positions = MT5.positions_get()
 
@@ -53,9 +57,10 @@ class OrderManager:
                 return False
 
             # 2. Get current price for filling info
-            tick = MT5.symbol_info_tick(symbol)
+            mt_symbol = Config.get_mt5_symbol(symbol)
+            tick = MT5.symbol_info_tick(mt_symbol)
             if tick is None:
-                logger.error(f"Trade failed: No tick data for {symbol}")
+                logger.error(f"Trade failed: No tick data for {mt_symbol}")
                 return False
 
             if direction == "BUY":
@@ -71,7 +76,7 @@ class OrderManager:
             # 3. Construct Request
             request = {
                 "action": MT5.TRADE_ACTION_DEAL,
-                "symbol": symbol,
+                "symbol": mt_symbol,
                 "volume": float(volume),
                 "type": order_type,
                 "price": price,
@@ -115,7 +120,10 @@ class OrderManager:
             
         position = positions[0]
         
-        tick = MT5.symbol_info_tick(symbol)
+        position = positions[0]
+        
+        mt_symbol = Config.get_mt5_symbol(symbol)
+        tick = MT5.symbol_info_tick(mt_symbol)
         if not tick:
             return False
             
@@ -128,7 +136,7 @@ class OrderManager:
 
         request = {
             "action": MT5.TRADE_ACTION_DEAL,
-            "symbol": symbol,
+            "symbol": mt_symbol,
             "volume": position.volume, # Close full volume
             "type": type_close,
             "position": ticket, # Important!

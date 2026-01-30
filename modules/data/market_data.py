@@ -3,7 +3,19 @@ import logging
 from datetime import datetime
 from modules.data.mt5_loader import MT5
 from modules.data.connection_manager import ConnectionManager
+from modules.data.connection_manager import ConnectionManager
 from config.config import Config
+
+# Mapping for string -> MT5 constant
+TIMEFRAME_MAP = {
+    "M1": MT5.TIMEFRAME_M1,
+    "M5": MT5.TIMEFRAME_M5,
+    "M15": MT5.TIMEFRAME_M15,
+    "M30": MT5.TIMEFRAME_M30,
+    "H1": MT5.TIMEFRAME_H1,
+    "H4": MT5.TIMEFRAME_H4,
+    "D1": MT5.TIMEFRAME_D1,
+}
 
 logger = logging.getLogger(__name__)
 
@@ -14,16 +26,20 @@ class MarketData:
         Checks if a symbol is available and visible in Market Watch.
         Attempts to add it if not visible.
         """
-        if not MT5.symbol_select(symbol, True):
-            logger.error(f"Failed to select symbol {symbol}")
+        """
+        # Resolve broker-specific symbol (e.g. "EURUSD" -> "EURUSD.a")
+        mt_symbol = Config.get_mt5_symbol(symbol)
+        
+        if not MT5.symbol_select(mt_symbol, True):
+            logger.error(f"Failed to select symbol {mt_symbol}")
             return False
             
-        info = MT5.symbol_info(symbol)
+        info = MT5.symbol_info(mt_symbol)
         if info is None:
-            logger.error(f"Symbol {symbol} not found")
+            logger.error(f"Symbol {mt_symbol} not found")
             return False
             
-        logger.info(f"Symbol {symbol} available. Spread: {info.spread}")
+        logger.info(f"Symbol {mt_symbol} available. Spread: {info.spread}")
         return True
 
     @staticmethod
@@ -44,11 +60,25 @@ class MarketData:
         if not ConnectionManager.ensure_connected():
             return pd.DataFrame()
 
+        # Resolve broker specific symbol
+        mt_symbol = Config.get_mt5_symbol(symbol)
+        
+        # Resolve Timeframe (String -> Int)
+        mt_tf = TIMEFRAME_MAP.get(timeframe, MT5.TIMEFRAME_M1)
+        if timeframe not in TIMEFRAME_MAP and isinstance(timeframe, str):
+            logger.warning(f"Unknown timeframe string '{timeframe}', defaulting to M1")
+        elif isinstance(timeframe, int):
+            mt_tf = timeframe
+
         # Copy rates
-        rates = MT5.copy_rates_from_pos(symbol, timeframe, 0, limit)
+        try:
+            rates = MT5.copy_rates_from_pos(mt_symbol, mt_tf, 0, limit)
+        except Exception as e:
+            logger.error(f"Critical MT5 Error for {mt_symbol}: {e}")
+            return pd.DataFrame()
         
         if rates is None or len(rates) == 0:
-            logger.warning(f"No data received for {symbol}")
+            logger.warning(f"No data received for {mt_symbol}")
             return pd.DataFrame()
 
         # Convert to DataFrame
@@ -72,7 +102,9 @@ class MarketData:
         """
         Returns the latest tick info (bid, ask) for a symbol.
         """
-        tick = MT5.symbol_info_tick(symbol)
+        """
+        mt_symbol = Config.get_mt5_symbol(symbol)
+        tick = MT5.symbol_info_tick(mt_symbol)
         if tick is None:
             return None
         return tick
