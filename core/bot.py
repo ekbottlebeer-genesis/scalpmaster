@@ -13,6 +13,8 @@ from modules.indicators.indicators import Indicators
 from modules.ai.regime_filter import RegimeFilter
 from strategies.checklist import StrategyChecklist
 from modules.data.news_loader import NewsLoader
+from modules.ui.telegram.notifier import TelegramNotifier
+from modules.ui.console import ConsoleUI
 
 # Execution Engines
 from modules.execution.order_manager import OrderManager
@@ -47,6 +49,7 @@ class ScalpMasterBot:
         """
         self.is_running = True
         logger.info(f"ScalpMaster v1.2 Started. Loop Interval: {Config.LOOP_INTERVAL}s")
+        TelegramNotifier.send("🚀 <b>ScalpMaster v1.2 Started</b>\nMonitoring markets...")
         
         if not ConnectionManager.initialize():
             logger.critical("Failed to connect to MT5. Exiting.")
@@ -69,6 +72,7 @@ class ScalpMasterBot:
         self.is_running = False
         ConnectionManager.shutdown()
         logger.info("ScalpMaster Stopped.")
+        TelegramNotifier.send("🛑 <b>ScalpMaster Stopped</b>")
 
     def _risk_snapshot(self):
         # account_info() returns tuple/struct in MT5
@@ -92,15 +96,25 @@ class ScalpMasterBot:
         current_time = datetime.now()
         
         # Iterate over monitored pairs
+        if not Config.TRADING_PAIRS:
+            return
+
+        ConsoleUI.print_header(len(Config.TRADING_PAIRS), current_time)
+        
+        # Iterate over monitored pairs
         for symbol in Config.TRADING_PAIRS:
             try:
                 self._process_symbol(symbol, current_time)
             except Exception as e:
                 logger.error(f"Error processing {symbol}: {e}")
+                ConsoleUI.print_row(symbol, "ERR", 0.0, f"Error: {str(e)}", error=True)
+                
+        ConsoleUI.print_section_end()
 
     def _process_symbol(self, symbol: str, now: datetime):
         # 0. Skip if position exists (One trade per pair rule)
         if self.execution.count_open_trades(symbol) > 0:
+            ConsoleUI.print_row(symbol, "---", 0.0, "Active Position (Skipped)", error=False)
             return
 
         # 0. Check connection/availability specific to symbol?
@@ -172,8 +186,17 @@ class ScalpMasterBot:
         # 5. Run Checklist
         decision = self.checklist.run(ctx)
         
+        # 6. UI Output
+        # Extract status from decision reasons or context
+        status_msg = decision.reasons[0] if decision.reasons else "Unknown"
         if decision.can_trade:
-            # 6. Execute!
+             status_msg = "🔥 TRADE FOUND!"
+        
+        rsi_val = ctx.indicators.get('RSI_14', 0.0)
+        ConsoleUI.print_row(symbol, bias, rsi_val, status_msg)
+        
+        if decision.can_trade:
+            # 7. Execute!
             self._execute_signal(symbol, bias, ctx)
         else:
             # Silent fail usually, or debug log if in verbose
@@ -218,9 +241,16 @@ class ScalpMasterBot:
             success = self.execution.execute_trade(symbol, mt5_dir, volume, sl, tp)
             
             if success:
-                # Notify Risk Manager? 
-                # Risk Manager updates on Trade Close usually. 
-                pass
+                # Notify Telegram
+                msg = (
+                    f"✅ <b>Order Placed</b>\n"
+                    f"Symbol: <code>{symbol}</code>\n"
+                    f"Side: <b>{mt5_dir}</b>\n"
+                    f"Lots: {volume}\n"
+                    f"Price: {current_price}\n"
+                    f"Risk: {risk_pct}%"
+                )
+                TelegramNotifier.send(msg)
 
     def _get_equity(self):
         info = MT5.account_info()
