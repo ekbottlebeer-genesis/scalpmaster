@@ -26,7 +26,6 @@ class MarketData:
         Checks if a symbol is available and visible in Market Watch.
         Attempts to add it if not visible.
         """
-        """
         # Resolve broker-specific symbol (e.g. "EURUSD" -> "EURUSD.a")
         mt_symbol = Config.get_mt5_symbol(symbol)
         
@@ -101,7 +100,6 @@ class MarketData:
     def get_tick_info(symbol):
         """
         Returns the latest tick info (bid, ask) for a symbol.
-        """
         """
         mt_symbol = Config.get_mt5_symbol(symbol)
         tick = MT5.symbol_info_tick(mt_symbol)
