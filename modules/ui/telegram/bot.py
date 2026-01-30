@@ -50,4 +50,9 @@ class TelegramBot:
         register_handlers(self.app, whitelist_filter)
 
         logger.info("Telegram Bot Polling Started...")
+        
+        # Explicitly create loop for this thread (Required for threading.Thread)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
         self.app.run_polling()
