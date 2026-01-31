@@ -71,6 +71,8 @@ class Config:
             missing_secrets.append("MT5_PATH")
         if not cls.TELEGRAM_TOKEN:
             missing_secrets.append("TELEGRAM_TOKEN")
+        if not cls.TELEGRAM_CHAT_ID:
+            missing_secrets.append("TELEGRAM_CHAT_ID")
         
         if missing_secrets:
             raise ValueError(

@@ -182,6 +182,8 @@ class ScalpMasterBot:
                 'RSI_14': last_row.get('RSI_14', 50),
                 'ATR_14': last_row.get('ATR_14', 0),
                 'ADX_14': last_row.get('ADX_14', 0),
+                'EMA_20': last_row.get('EMA_20', 0),
+                'EMA_200': last_row.get('EMA_200', 0),
             },
             market_regime=regime,
             trend_bias=bias,
@@ -217,24 +219,36 @@ class ScalpMasterBot:
             return
 
         # Calculate Size
-        # Mocking specific entry/sl for now as Checklist didn't provide specific levels
-        # In full implementation, Strategy would return Entry/SL/TP
-        # Here we assume Market Order + generic 10 pip SL for demo
-        sl_pips = 10
-        tp_pips = 20
+        # Dynamic ATR-Based Stops
+        # SL = 1.5 x ATR
+        # TP = 3.0 x ATR
+        atr = ctx.indicators.get('ATR_14', 0.0)
         
         mt_symbol = Config.get_mt5_symbol(symbol)
         sym_info = MT5.symbol_info(mt_symbol)
         point = sym_info.point if sym_info else 0.00001
         
+        # Safety: Floor ATR to avoid zero division or tiny stops
+        if atr < 5 * point:
+             atr = 5 * point
+             
+        sl_dist = 1.5 * atr
+        tp_dist = 3.0 * atr
+        
+        # Min SL check (e.g. 5 pips)
+        min_sl = 50 * point # 5 pips
+        if sl_dist < min_sl:
+            sl_dist = min_sl
+            tp_dist = 2 * sl_dist # Maintain 1:2
+        
         current_price = ctx.current_price
         if direction == "LONG":
-            sl = current_price - (sl_pips * point * 10)
-            tp = current_price + (tp_pips * point * 10)
+            sl = current_price - sl_dist
+            tp = current_price + tp_dist
             mt5_dir = "BUY"
         else:
-            sl = current_price + (sl_pips * point * 10)
-            tp = current_price - (tp_pips * point * 10)
+            sl = current_price + sl_dist
+            tp = current_price - tp_dist
             mt5_dir = "SELL"
             
         risk_pct = self.risk_manager.get_adaptive_risk(self._get_equity())

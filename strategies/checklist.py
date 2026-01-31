@@ -95,13 +95,30 @@ class StrategyChecklist:
         # But commonly this layer *confirms* the signal found by scanning.
         
         # Let's say we check strict RSI bounds for the Trend Bias
+        # Validate Trend Bias with RSI
         rsi = ctx.indicators.get('RSI_14', 50)
         
         if ctx.trend_bias == "LONG":
             if rsi > 70: return False, "RSI_OVERBOUGHT_FOR_LONG"
         elif ctx.trend_bias == "SHORT":
             if rsi < 30: return False, "RSI_OVERSOLD_FOR_SHORT"
+
+        # ----------------------------------------------------
+        # NEW: Extension / Pullback Check
+        # Ensure we are not buying the top of a run
+        # Logic: If abs(Price - EMA20) > 2.0 * ATR -> REJECT
+        # ----------------------------------------------------
+        ema20 = ctx.indicators.get('EMA_20', 0)
+        atr = ctx.indicators.get('ATR_14', 0)
+        price = ctx.current_price
+        
+        if ema20 > 0 and atr > 0 and price > 0:
+            dist = abs(price - ema20)
+            threshold = 2.0 * atr
             
+            if dist > threshold:
+                return False, f"PRICE_EXTENDED: Dist {dist:.5f} > {threshold:.5f} (2.0xATR)"
+
         return True, ""
 
     def _check_volatility(self, ctx: TradeContext) -> Tuple[bool, str]:

@@ -15,6 +15,14 @@ logging.basicConfig(
 from config.config import Config
 from core.bot import ScalpMasterBot
 from modules.ui.telegram.bot import TelegramBot
+from modules.ui.telegram.notifier import TelegramLogHandler
+
+# Add Telegram Handler to Root Logger
+tg_handler = TelegramLogHandler()
+tg_handler.setLevel(logging.ERROR)
+formatter = logging.Formatter('%(name)s: %(message)s')
+tg_handler.setFormatter(formatter)
+logging.getLogger().addHandler(tg_handler)
 
 logger = logging.getLogger("Main")
 

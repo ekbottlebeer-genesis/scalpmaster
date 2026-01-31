@@ -14,23 +14,7 @@ class TelegramBot:
         self.app = None
         self.engine = engine
 
-    async def whitelist_middleware(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        Security Middleware: Rejects messages from unauthorized users.
-        """
-        if not update.effective_chat:
-            return
-            
-        chat_id = str(update.effective_chat.id)
-        if chat_id != self.allowed_chat_id:
-            logger.warning(f"Unauthorized access attempt from {chat_id}")
-            # Silently ignore or maybe send "Access Denied" if you want
-            return 
-            
-        # If authorized, handlers will process it naturally.
-        # Note: PTB doesn't have "middleware" in the express/flask sense easily.
-        # We usually use a Filter.
-        pass
+
 
     async def post_init(self, application):
         """
